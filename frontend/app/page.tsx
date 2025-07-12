@@ -2,98 +2,17 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Send, ShoppingCart, Bot, User, Sparkles, Plus, Minus, Trash2 } from "lucide-react"
+import { Send, ShoppingCart, Bot, User, Sparkles, Plus, Minus, Trash2, RotateCcw, Clock, MessageCircle } from "lucide-react"
 import Image from "next/image"
+import { AlgoliaProduct } from "@/types"
+import Markdown from 'react-markdown'
 
-// Product database
-const allProducts = [
-  {
-    id: 1,
-    name: "Fresh Bananas",
-    price: 2.99,
-    image: "/placeholder.svg?height=200&width=200",
-    category: "Fruits",
-    keywords: ["fruit", "banana", "breakfast", "healthy", "potassium"],
-  },
-  {
-    id: 2,
-    name: "Organic Apples",
-    price: 4.99,
-    image: "/placeholder.svg?height=200&width=200",
-    category: "Fruits",
-    keywords: ["fruit", "apple", "organic", "healthy", "snack"],
-  },
-  {
-    id: 3,
-    name: "Mixed Berries",
-    price: 6.99,
-    image: "/placeholder.svg?height=200&width=200",
-    category: "Fruits",
-    keywords: ["fruit", "berry", "antioxidant", "healthy", "breakfast"],
-  },
-  {
-    id: 4,
-    name: "Greek Yogurt",
-    price: 3.49,
-    image: "/placeholder.svg?height=200&width=200",
-    category: "Dairy",
-    keywords: ["yogurt", "protein", "breakfast", "healthy", "dairy"],
-  },
-  {
-    id: 5,
-    name: "Whole Grain Bread",
-    price: 3.99,
-    image: "/placeholder.svg?height=200&width=200",
-    category: "Bakery",
-    keywords: ["bread", "whole grain", "breakfast", "fiber", "healthy"],
-  },
-  {
-    id: 6,
-    name: "Almond Milk",
-    price: 3.99,
-    image: "/placeholder.svg?height=200&width=200",
-    category: "Dairy Alternatives",
-    keywords: ["milk", "almond", "dairy-free", "healthy", "breakfast"],
-  },
-  {
-    id: 7,
-    name: "Chicken Breast",
-    price: 8.99,
-    image: "/placeholder.svg?height=200&width=200",
-    category: "Meat",
-    keywords: ["chicken", "protein", "meat", "dinner", "healthy"],
-  },
-  {
-    id: 8,
-    name: "Salmon Fillet",
-    price: 12.99,
-    image: "/placeholder.svg?height=200&width=200",
-    category: "Seafood",
-    keywords: ["salmon", "fish", "omega-3", "protein", "healthy", "dinner"],
-  },
-  {
-    id: 9,
-    name: "Pasta",
-    price: 2.49,
-    image: "/placeholder.svg?height=200&width=200",
-    category: "Pantry",
-    keywords: ["pasta", "carbs", "dinner", "italian", "quick"],
-  },
-  {
-    id: 10,
-    name: "Olive Oil",
-    price: 7.99,
-    image: "/placeholder.svg?height=200&width=200",
-    category: "Pantry",
-    keywords: ["oil", "olive", "cooking", "healthy", "mediterranean"],
-  },
-]
 
 // Message types
 type MessageType = "user" | "bot" | "product-suggestion"
@@ -103,60 +22,38 @@ interface Message {
   type: MessageType
   content: string
   timestamp: Date
-  products?: typeof allProducts
+  products?: AlgoliaProduct[]
 }
 
 interface CartItem {
-  product: (typeof allProducts)[0]
+  product: AlgoliaProduct
   quantity: number
 }
 
-// AI responses based on keywords
-const getAIResponse = (userMessage: string) => {
-  const message = userMessage.toLowerCase()
-
-  if (message.includes("breakfast") || message.includes("morning")) {
-    return {
-      text: "Great choice for breakfast! I've found some nutritious options that will give you energy for the day. Here are my top recommendations:",
-      keywords: ["breakfast", "healthy", "fruit"],
-    }
-  } else if (message.includes("dinner") || message.includes("evening") || message.includes("cook")) {
-    return {
-      text: "Perfect for dinner! Let me suggest some delicious options for a satisfying evening meal:",
-      keywords: ["dinner", "protein", "cooking"],
-    }
-  } else if (message.includes("healthy") || message.includes("diet") || message.includes("nutrition")) {
-    return {
-      text: "I love helping with healthy choices! Here are some nutritious options that will support your wellness goals:",
-      keywords: ["healthy", "protein", "fruit"],
-    }
-  } else if (message.includes("quick") || message.includes("fast") || message.includes("easy")) {
-    return {
-      text: "I understand you need something quick and easy! Here are some convenient options:",
-      keywords: ["quick", "pasta", "bread"],
-    }
-  } else if (message.includes("protein")) {
-    return {
-      text: "Excellent! Protein is essential for a balanced diet. Here are some high-quality protein sources:",
-      keywords: ["protein", "chicken", "salmon", "yogurt"],
-    }
-  } else {
-    return {
-      text: "I'd be happy to help you find what you're looking for! Based on your request, here are some great options:",
-      keywords: ["healthy", "breakfast"],
-    }
-  }
+interface ConversationInfo {
+  messageCount: number
+  startTime: number
 }
 
-// Function to find relevant products
-const findRelevantProducts = (keywords: string[]) => {
-  return allProducts
-    .filter((product) =>
-      keywords.some((keyword) =>
-        product.keywords.some((productKeyword) => productKeyword.includes(keyword) || keyword.includes(productKeyword)),
-      ),
-    )
-    .slice(0, 4) // Limit to 4 products per suggestion
+// AI responses based on keywords
+const getAIResponse = (prompt: string, sessionId?: string): Promise<{ 
+  message: string; 
+  products: AlgoliaProduct[];
+  sessionId: string;
+  conversationInfo?: ConversationInfo;
+}> => {
+  const body: { prompt: string; sessionId?: string } = { prompt };
+  if (sessionId) {
+    body.sessionId = sessionId;
+  }
+
+  return fetch("http://localhost:4242/api/chat", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  }).then((res) => res.json())
 }
 
 const initialMessages: Message[] = [
@@ -173,10 +70,116 @@ export default function AIShoppingAssistant() {
   const [messages, setMessages] = useState<Message[]>(initialMessages)
   const [inputValue, setInputValue] = useState("")
   const [isTyping, setIsTyping] = useState(false)
-  const [suggestedProducts, setSuggestedProducts] = useState(allProducts.slice(0, 6))
+  const [suggestedProducts, setSuggestedProducts] = useState<AlgoliaProduct[]>([])
   const [cart, setCart] = useState<CartItem[]>([])
+  
+  // Session management state
+  const [sessionId, setSessionId] = useState<string | null>(null)
+  const [conversationInfo, setConversationInfo] = useState<ConversationInfo | null>(null)
+  const [isNewSession, setIsNewSession] = useState(true)
 
-  const handleSendMessage = () => {
+  // Load session from localStorage on component mount
+  useEffect(() => {
+    const savedSessionId = localStorage.getItem('shopping-assistant-session-id')
+    const savedMessages = localStorage.getItem('shopping-assistant-messages')
+    const savedCart = localStorage.getItem('shopping-assistant-cart')
+    
+    if (savedSessionId) {
+      // Check if the session is still valid on the backend
+      fetch(`http://localhost:4242/api/conversations/${savedSessionId}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.exists) {
+            setSessionId(savedSessionId)
+            setConversationInfo({
+              messageCount: data.messageCount,
+              startTime: data.startTime
+            })
+            setIsNewSession(false)
+            
+            // Restore messages if available
+            if (savedMessages) {
+              try {
+                const parsedMessages = JSON.parse(savedMessages)
+                // Add a welcome back message if restoring a session
+                const welcomeBackMessage: Message = {
+                  id: parsedMessages.length + 1,
+                  type: "bot",
+                  content: "Welcome back! I remember our conversation. How can I continue helping you with your shopping?",
+                  timestamp: new Date(),
+                }
+                setMessages([...parsedMessages, welcomeBackMessage])
+              } catch (e) {
+                console.warn('Failed to parse saved messages')
+              }
+            }
+            
+            // Restore cart if available
+            if (savedCart) {
+              try {
+                const parsedCart = JSON.parse(savedCart)
+                setCart(parsedCart)
+              } catch (e) {
+                console.warn('Failed to parse saved cart')
+              }
+            }
+          } else {
+            // Session expired, clear localStorage
+            localStorage.removeItem('shopping-assistant-session-id')
+            localStorage.removeItem('shopping-assistant-messages')
+            localStorage.removeItem('shopping-assistant-cart')
+          }
+        })
+        .catch(err => {
+          console.warn('Failed to check session validity:', err)
+          // Clear invalid session data
+          localStorage.removeItem('shopping-assistant-session-id')
+          localStorage.removeItem('shopping-assistant-messages')
+          localStorage.removeItem('shopping-assistant-cart')
+        })
+    }
+  }, [])
+
+  // Save conversation state to localStorage
+  useEffect(() => {
+    if (sessionId) {
+      localStorage.setItem('shopping-assistant-session-id', sessionId)
+    }
+  }, [sessionId])
+
+  useEffect(() => {
+    if (messages.length > 1) { // Don't save just the initial message
+      localStorage.setItem('shopping-assistant-messages', JSON.stringify(messages))
+    }
+  }, [messages])
+
+  useEffect(() => {
+    localStorage.setItem('shopping-assistant-cart', JSON.stringify(cart))
+  }, [cart])
+
+  const startNewConversation = () => {
+    // Clear current session
+    if (sessionId) {
+      fetch(`http://localhost:4242/api/conversations/${sessionId}`, {
+        method: 'DELETE'
+      }).catch(err => console.warn('Failed to delete session:', err))
+    }
+    
+    // Reset all state
+    setSessionId(null)
+    setConversationInfo(null)
+    setIsNewSession(true)
+    setMessages(initialMessages)
+    setCart([])
+    setSuggestedProducts([])
+    
+    // Clear localStorage
+    localStorage.removeItem('shopping-assistant-session-id')
+    localStorage.removeItem('shopping-assistant-messages')
+    localStorage.removeItem('shopping-assistant-cart')
+  }
+
+  const handleSendMessage = async () => {
     if (inputValue.trim()) {
       const newMessage: Message = {
         id: messages.length + 1,
@@ -191,16 +194,29 @@ export default function AIShoppingAssistant() {
       const userInput = inputValue
       setInputValue("")
 
-      // Simulate AI processing time
-      setTimeout(() => {
-        const aiResponse = getAIResponse(userInput)
-        const relevantProducts = findRelevantProducts(aiResponse.keywords)
+      try {
+        const { 
+          message: aiResponse, 
+          products, 
+          sessionId: responseSessionId, 
+          conversationInfo: responseConversationInfo 
+        } = await getAIResponse(userInput, sessionId || undefined)
+
+        // Update session information
+        if (responseSessionId && responseSessionId !== sessionId) {
+          setSessionId(responseSessionId)
+          setIsNewSession(false)
+        }
+
+        if (responseConversationInfo) {
+          setConversationInfo(responseConversationInfo)
+        }
 
         // Add bot response
         const botMessage: Message = {
           id: messages.length + 2,
           type: "bot",
-          content: aiResponse.text,
+          content: aiResponse,
           timestamp: new Date(),
         }
 
@@ -210,13 +226,25 @@ export default function AIShoppingAssistant() {
           type: "product-suggestion",
           content: "Here are my recommendations:",
           timestamp: new Date(),
-          products: relevantProducts,
+          products: products,
         }
 
         setMessages((prev) => [...prev, botMessage, productMessage])
-        setSuggestedProducts(relevantProducts.length > 0 ? relevantProducts : suggestedProducts)
+        setSuggestedProducts(products.length > 0 ? products : suggestedProducts)
+      } catch (error) {
+        console.error('Failed to get AI response:', error)
+        
+        // Add error message
+        const errorMessage: Message = {
+          id: messages.length + 2,
+          type: "bot",
+          content: "I'm sorry, I'm having trouble connecting right now. Please try again in a moment.",
+          timestamp: new Date(),
+        }
+        setMessages((prev) => [...prev, errorMessage])
+      } finally {
         setIsTyping(false)
-      }, 1500)
+      }
     }
   }
 
@@ -226,12 +254,12 @@ export default function AIShoppingAssistant() {
     }
   }
 
-  const handleAddToCart = (product: (typeof allProducts)[0]) => {
+  const handleAddToCart = (product: AlgoliaProduct) => {
     setCart((prevCart) => {
-      const existingItem = prevCart.find((item) => item.product.id === product.id)
+      const existingItem = prevCart.find((item) => item.product.objectID === product.objectID)
       if (existingItem) {
         return prevCart.map((item) =>
-          item.product.id === product.id ? { ...item, quantity: item.quantity + 1 } : item,
+          item.product.objectID === product.objectID ? { ...item, quantity: item.quantity + 1 } : item,
         )
       } else {
         return [...prevCart, { product, quantity: 1 }]
@@ -239,24 +267,24 @@ export default function AIShoppingAssistant() {
     })
   }
 
-  const handleAddAllToCart = (products: typeof allProducts) => {
+  const handleAddAllToCart = (products: AlgoliaProduct[]) => {
     products.forEach((product) => {
       handleAddToCart(product)
     })
   }
 
-  const updateCartQuantity = (productId: number, newQuantity: number) => {
+  const updateCartQuantity = (productId: string, newQuantity: number) => {
     if (newQuantity <= 0) {
-      setCart((prevCart) => prevCart.filter((item) => item.product.id !== productId))
+      setCart((prevCart) => prevCart.filter((item) => item.product.objectID !== productId))
     } else {
       setCart((prevCart) =>
-        prevCart.map((item) => (item.product.id === productId ? { ...item, quantity: newQuantity } : item)),
+        prevCart.map((item) => (item.product.objectID === productId ? { ...item, quantity: newQuantity } : item)),
       )
     }
   }
 
-  const removeFromCart = (productId: number) => {
-    setCart((prevCart) => prevCart.filter((item) => item.product.id !== productId))
+  const removeFromCart = (productId: string) => {
+    setCart((prevCart) => prevCart.filter((item) => item.product.objectID !== productId))
   }
 
   const getCartTotal = () => {
@@ -274,6 +302,31 @@ export default function AIShoppingAssistant() {
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-gray-900 mb-2">Your AI Shopping Assistant</h1>
           <p className="text-gray-600">Get personalized product recommendations through conversation</p>
+          
+          {/* Session Status */}
+          {sessionId && conversationInfo && (
+            <div className="mt-4 flex justify-center">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-2 flex items-center gap-3 text-sm">
+                <div className="flex items-center gap-1 text-blue-700">
+                  <MessageCircle className="h-4 w-4" />
+                  <span>Session Active</span>
+                </div>
+                <div className="flex items-center gap-1 text-blue-600">
+                  <Clock className="h-4 w-4" />
+                  <span>{conversationInfo.messageCount} messages</span>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={startNewConversation}
+                  className="h-6 px-2 text-xs bg-transparent border-blue-300 text-blue-700 hover:bg-blue-100"
+                >
+                  <RotateCcw className="h-3 w-3 mr-1" />
+                  New Chat
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="grid lg:grid-cols-3 gap-8">
@@ -281,11 +334,28 @@ export default function AIShoppingAssistant() {
           <div className="lg:col-span-2">
             <Card className="h-[700px] flex flex-col">
               <CardHeader className="pb-4">
-                <CardTitle className="flex items-center gap-2">
-                  <Bot className="h-5 w-5 text-blue-600" />
-                  AI Shopping Assistant
-                  <Sparkles className="h-4 w-4 text-yellow-500" />
-                </CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2">
+                    <Bot className="h-5 w-5 text-blue-600" />
+                    AI Shopping Assistant
+                    <Sparkles className="h-4 w-4 text-yellow-500" />
+                  </CardTitle>
+                  
+                  {/* Conversation Status */}
+                  <div className="flex items-center gap-2">
+                    {!isNewSession && sessionId && (
+                      <Badge variant="secondary" className="bg-green-100 text-green-700 border-green-200">
+                        <MessageCircle className="h-3 w-3 mr-1" />
+                        Conversation Active
+                      </Badge>
+                    )}
+                    {isNewSession && (
+                      <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                        New Session
+                      </Badge>
+                    )}
+                  </div>
+                </div>
               </CardHeader>
 
               <CardContent className="flex-1 overflow-hidden">
@@ -297,14 +367,15 @@ export default function AIShoppingAssistant() {
                         {message.type !== "product-suggestion" && (
                           <div className={`flex ${message.type === "user" ? "justify-end" : "justify-start"}`}>
                             <div
-                              className={`max-w-[80%] rounded-lg p-3 ${
-                                message.type === "user" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-900"
-                              }`}
+                              className={`max-w-[80%] rounded-lg p-3 ${message.type === "user" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-900"
+                                }`}
                             >
                               <div className="flex items-start gap-2">
                                 {message.type === "bot" && <Bot className="h-4 w-4 mt-0.5 text-blue-600" />}
                                 {message.type === "user" && <User className="h-4 w-4 mt-0.5" />}
-                                <p className="text-sm">{message.content}</p>
+                                <div>
+                                  <Markdown>{message.content}</Markdown>
+                                </div>
                               </div>
                             </div>
                           </div>
@@ -332,12 +403,12 @@ export default function AIShoppingAssistant() {
 
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 {message.products.map((product) => (
-                                  <Card key={product.id} className="bg-white/80 hover:bg-white transition-colors">
+                                  <Card key={product.objectID} className="bg-white/80 hover:bg-white transition-colors">
                                     <CardContent className="p-3">
                                       <div className="flex gap-3">
                                         <div className="w-16 h-16 relative rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
                                           <Image
-                                            src={product.image || "/placeholder.svg"}
+                                            src={product.image_url || "/placeholder.svg"}
                                             alt={product.name}
                                             fill
                                             className="object-cover"
@@ -416,6 +487,49 @@ export default function AIShoppingAssistant() {
 
           {/* Sidebar */}
           <div className="space-y-4">
+            {/* Session Management */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <MessageCircle className="h-5 w-5" />
+                  Conversation
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {sessionId && conversationInfo ? (
+                  <div className="space-y-3">
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                      <div className="flex items-center gap-2 text-green-700 mb-2">
+                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                        <span className="text-sm font-medium">Active Session</span>
+                      </div>
+                      <div className="text-xs text-green-600 space-y-1">
+                        <div>Messages: {conversationInfo.messageCount}</div>
+                        <div>Started: {new Date(conversationInfo.startTime).toLocaleTimeString()}</div>
+                      </div>
+                    </div>
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      onClick={startNewConversation}
+                    >
+                      <RotateCcw className="h-4 w-4 mr-2" />
+                      Start New Conversation
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-center">
+                    <div className="text-blue-700 text-sm">
+                      Ready to start a new conversation
+                    </div>
+                    <div className="text-blue-600 text-xs mt-1">
+                      Your conversation will be saved automatically
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
             {/* Quick Actions */}
             <Card>
               <CardHeader>
@@ -477,10 +591,10 @@ export default function AIShoppingAssistant() {
                   <ScrollArea className="h-64">
                     <div className="space-y-3">
                       {cart.map((item) => (
-                        <div key={item.product.id} className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg">
+                        <div key={item.product.objectID} className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg">
                           <div className="w-12 h-12 relative rounded overflow-hidden bg-gray-100 flex-shrink-0">
                             <Image
-                              src={item.product.image || "/placeholder.svg"}
+                              src={item.product.image_url || "/placeholder.svg"}
                               alt={item.product.name}
                               fill
                               className="object-cover"
@@ -495,7 +609,7 @@ export default function AIShoppingAssistant() {
                               size="icon"
                               variant="outline"
                               className="h-6 w-6 bg-transparent"
-                              onClick={() => updateCartQuantity(item.product.id, item.quantity - 1)}
+                              onClick={() => updateCartQuantity(item.product.objectID, item.quantity - 1)}
                             >
                               <Minus className="h-3 w-3" />
                             </Button>
@@ -504,7 +618,7 @@ export default function AIShoppingAssistant() {
                               size="icon"
                               variant="outline"
                               className="h-6 w-6 bg-transparent"
-                              onClick={() => updateCartQuantity(item.product.id, item.quantity + 1)}
+                              onClick={() => updateCartQuantity(item.product.objectID, item.quantity + 1)}
                             >
                               <Plus className="h-3 w-3" />
                             </Button>
@@ -512,7 +626,7 @@ export default function AIShoppingAssistant() {
                               size="icon"
                               variant="outline"
                               className="h-6 w-6 ml-1 text-red-500 hover:text-red-700 bg-transparent"
-                              onClick={() => removeFromCart(item.product.id)}
+                              onClick={() => removeFromCart(item.product.objectID)}
                             >
                               <Trash2 className="h-3 w-3" />
                             </Button>
