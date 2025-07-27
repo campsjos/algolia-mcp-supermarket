@@ -15,40 +15,6 @@ const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const ALGOLIA_APP_ID = process.env.ALGOLIA_APP_ID || '';
 const ALGOLIA_INDEX_NAME = process.env.ALGOLIA_INDEX_NAME || '';
 
-// === Logger setup ===
-const LOG_DIR = path.join(process.cwd(), 'logs');
-const LOG_FILE = path.join(LOG_DIR, 'agent-responses.log');
-
-// Ensure logs directory exists
-if (!fs.existsSync(LOG_DIR)) {
-  fs.mkdirSync(LOG_DIR, { recursive: true });
-}
-
-// Logger function
-function logAgentResponse(sessionId, userPrompt, agentResponse, hasAlgoliaResults, algoliaResultsCount, fullState = null) {
-  const timestamp = new Date().toISOString();
-  const logEntry = {
-    timestamp,
-    sessionId,
-    userPrompt,
-    agentResponse: agentResponse.substring(0, 500) + (agentResponse.length > 500 ? '...' : ''), // Truncate long responses
-    hasAlgoliaResults,
-    algoliaResultsCount,
-    searchedAlgolia: hasAlgoliaResults || algoliaResultsCount > 0,
-    fullState: fullState ? JSON.stringify(fullState, null, 2) : null,
-    separator: '---'
-  };
-  
-  const logLine = JSON.stringify(logEntry, null, 2) + '\n\n';
-  
-  try {
-    fs.appendFileSync(LOG_FILE, logLine);
-    console.log(`📝 Logged response for session ${sessionId} - Algolia search: ${logEntry.searchedAlgolia}`);
-  } catch (error) {
-    console.error('Failed to write to log file:', error);
-  }
-}
-
 // === Initialize OpenAI client ===
 const openai = new OpenAI({ apiKey: OPENAI_API_KEY });
 
@@ -190,26 +156,6 @@ app.post('/api/chat', async (req, res) => {
     console.log(`Found ${hits.length} Algolia products for session ${currentSessionId}`);
     console.log('Algolia search results:', hits);
 
-    // result.state._generatedItems.forEach(element => {
-    //   if (element.type === 'tool_call_output_item') {
-    //     let text = JSON.parse(element.rawItem.output.text);
-    //     if (text && !text.text.includes('Error 404: ')) {
-    //       text = JSON.parse(text.text);
-    //       hits = text.hits || [];
-    //     }
-    //   }
-    // });
-
-    // Log the agent response with Algolia search info
-    logAgentResponse(
-      currentSessionId,
-      prompt,
-      output,
-      hits.length > 0,
-      hits.length,
-      result.state
-    );
-
     // Return response with both the agent's message and Algolia results
     res.json({
       message: output,
@@ -284,16 +230,6 @@ app.post('/api/search', async (req, res) => {
     // Extract Algolia search results using helper function
     let products = extractAlgoliaResults(result);
     console.log("Extracted search products:", products);
-
-    // Log the search response
-    logAgentResponse(
-      `search_${Date.now()}`,
-      query,
-      result.finalOutput,
-      products.length > 0,
-      products.length,
-      result.state
-    );
 
     res.json({
       query,
