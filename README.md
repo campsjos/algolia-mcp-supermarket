@@ -4,10 +4,11 @@ A shopping assistant that actually understands when you say "I want to make past
 
 ## 🎥 Demo
 
-*Coming soon - need to record a quick demo*
+[![Watch the video](https://img.youtube.com/vi/uFwB4Re9BrQ/maxresdefault.jpg)](https://youtu.be/uFwB4Re9BrQ)
 
 ## ✨ What it does
 
+- **Full web interface**: Chat UI running on `localhost:3000` with real-time responses
 - Chat naturally: "I'm making tacos tonight" → finds tortillas, beef, cheese, etc.
 - Weather aware: "It's so hot today!" → suggests ice cream and cold drinks  
 - Smart limiting: Shows 1 result per search when doing multiple searches, 4 when single
@@ -27,15 +28,19 @@ A shopping assistant that actually understands when you say "I want to make past
 2. Clone this repo and `npm run setup`
 3. Create an Algolia index and import `products.json` (dashboard or CLI)
 4. Copy `backend/.env.example` to `backend/.env` and fill in your keys
-5. `npm run dev` and you're good to go!
+5. `npm run dev` - opens frontend at `http://localhost:3000` and API at `:4242`
 
 ## 🎯 Try it out
 
 ```bash
-# Start everything
+# Start both frontend (port 3000) and backend (port 4242)
 npm run dev
+```
 
-# Test it
+**Web Interface:** Open `http://localhost:3000` for the full chat experience
+
+**API Testing:**
+```bash
 curl -X POST http://localhost:4242/api/chat -H "Content-Type: application/json" -d '{"prompt": "I want to make chocolate cake"}'
 
 curl -X POST http://localhost:4242/api/chat -H "Content-Type: application/json" -d '{"prompt": "Its really hot today!"}'
@@ -59,21 +64,19 @@ The bot automatically searches when you mention:
 - Meals → finds components
 - Direct products → finds alternatives too
 
-Everything gets logged to `./logs/agent-responses.log` for debugging.
-
 ## 🔧 Development
 
 ```bash
-npm run dev         # Both servers
-npm run dev:backend # Just the API
-npm run logs        # View agent logs
+npm run dev         # Both frontend (:3000) and backend (:4242)
+npm run dev:backend # Just the API server
+npm run dev:frontend # Just the Next.js frontend
 npm run clean       # Clean slate
 ```
 
 Structure:
 ```
-├── backend/server.js    # Main Express app
-├── frontend/           # Next.js (WIP)
+├── backend/server.js    # Express API server
+├── frontend/           # Next.js chat interface
 ├── products.json       # Sample data
 └── package.json        # Monorepo scripts
 ```
