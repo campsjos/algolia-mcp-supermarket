@@ -1,8 +1,9 @@
 {
   "name": "mcp-supermarket-back",
   "version": "1.0.0",
-  "description": "",
-  "license": "ISC",
+  "description": "AI-powered supermarket shopping assistant with Algolia MCP integration. Proactively searches for products based on natural language conversations and provides personalized shopping recommendations.",
+  "keywords": ["mcp", "algolia", "shopping", "ai", "assistant", "supermarket", "openai", "chatbot"],
+  "license": "MIT",
   "author": "Josep Camps <campsjos@gmail.com>",
   "main": "server.js",
   "type": "module",

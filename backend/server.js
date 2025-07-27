@@ -9,6 +9,27 @@ import path from 'path';
 
 dotenv.config();
 
+// === Environment Validation ===
+const requiredEnvVars = {
+  OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+  MCP_SERVER_URL: process.env.MCP_SERVER_URL,
+  ALGOLIA_APP_ID: process.env.ALGOLIA_APP_ID,
+  ALGOLIA_INDEX_NAME: process.env.ALGOLIA_INDEX_NAME
+};
+
+const missingVars = Object.entries(requiredEnvVars)
+  .filter(([key, value]) => !value)
+  .map(([key]) => key);
+
+if (missingVars.length > 0) {
+  console.error('❌ Missing required environment variables:');
+  missingVars.forEach(varName => {
+    console.error(`   - ${varName}`);
+  });
+  console.error('\nPlease check your .env file and ensure all required variables are set.');
+  process.exit(1);
+}
+
 // === Configuration ===
 const PORT = process.env.PORT || 4242;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
@@ -416,9 +437,6 @@ Be warm, helpful, and genuinely interested in helping customers find what they n
       console.log(`   - Persistent conversation memory (30min timeout)`);
       console.log(`   - Automatic session cleanup every 5 minutes`);
       console.log(`   - Session-based conversation threads`);
-      console.log(`� Logging:`);
-      console.log(`   - Agent responses logged to: ${LOG_FILE}`);
-      console.log(`   - Algolia search tracking enabled`);
       console.log(`�🛒 Ready to help customers with their shopping needs!`);
     });
   } catch (error) {
