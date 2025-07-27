@@ -92,7 +92,6 @@ app.get('/api/info', (req, res) => {
     description: 'AI-powered shopping assistant with Algolia search integration and conversation memory',
     endpoints: {
       '/api/chat': 'POST - Chat with the shopping assistant (supports conversation sessions)',
-      '/api/search': 'POST - Search for products directly',
       '/api/conversations/:sessionId': 'GET - Get conversation info, DELETE - End conversation',
       '/api/info': 'GET - API information'
     },
@@ -167,9 +166,6 @@ app.post('/api/chat', async (req, res) => {
     const output = result.finalOutput;
     console.log('Agent response:', output);
     let hits = [];
-    console.log('Agent state:', !!result.state);
-    console.log('Searched Algolia:', !!result.state?.searchedAlgolia);
-    console.log('Has Algolia results:', !!result.state?.hasAlgoliaResults);
 
     
     // Extract Algolia search results from the agent's state
@@ -224,43 +220,6 @@ app.delete('/api/conversations/:sessionId', (req, res) => {
     res.json({ message: `Conversation ${sessionId} ended successfully` });
   } else {
     res.status(404).json({ error: 'Conversation not found' });
-  }
-});
-
-// === /api/search endpoint for direct product search ===
-app.post('/api/search', async (req, res) => {
-  try {
-    if (!agent) {
-      return res.status(503).json({ error: 'Shopping assistant is not ready yet. Please try again in a moment.' });
-    }
-
-    const { query, filters } = req.body;
-    if (!query) {
-      return res.status(400).json({ error: 'A search query is required.' });
-    }
-
-    console.log('Product search query:', query);
-
-    // Create a search prompt for the agent
-    const searchPrompt = `Search for products related to: "${query}"${filters ? ` with filters: ${filters}` : ''}. Please provide a list of relevant products.`;
-
-    const result = await run(agent, searchPrompt);
-
-    console.log('Search result structure:', JSON.stringify(result, null, 2));
-
-    // Extract Algolia search results using helper function
-    let products = extractAlgoliaResults(result);
-    console.log("Extracted search products:", products);
-
-    res.json({
-      query,
-      products,
-      totalProducts: products.length,
-      message: result.finalOutput
-    });
-  } catch (err) {
-    console.error('Error processing search:', err);
-    res.status(500).json({ error: 'Internal server error.' });
   }
 });
 
@@ -430,7 +389,6 @@ Be warm, helpful, and genuinely interested in helping customers find what they n
       console.log(`📍 API endpoints:`);
       console.log(`   - GET  /api/info - API information`);
       console.log(`   - POST /api/chat - Chat with shopping assistant (with conversation memory)`);
-      console.log(`   - POST /api/search - Direct product search`);
       console.log(`   - GET  /api/conversations/:sessionId - Get conversation info`);
       console.log(`   - DELETE /api/conversations/:sessionId - End conversation`);
       console.log(`💬 Conversation features:`);
