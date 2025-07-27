@@ -1,10 +1,9 @@
 import type { Metadata } from 'next'
 import './globals.css'
-
 export const metadata: Metadata = {
-  title: 'v0 App',
-  description: 'Created with v0',
-  generator: 'v0.dev',
+  title: 'Algolia MCP Supermarket Chatbot',
+  description: 'A Node.js backend project integrating Algolia MCP for a supermarket chatbot.',
+  generator: 'algolia-mcp-supermarket',
 }
 
 export default function RootLayout({

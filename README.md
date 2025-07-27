@@ -1,254 +1,91 @@
-# Algolia MCP Supermarket Shopping Assistant
+# Algolia MCP Supermarket Bot
 
-An AI-powered supermarket shopping assistant that integrates with Algolia search through Model Context Protocol (MCP). The assistant proactively searches for products based on natural language conversations and provides personalized shopping recommendations.
+A shopping assistant that actually understands when you say "I want to make pasta" and automatically finds ingredients for you. Built with OpenAI Agents + Algolia MCP integration.
 
 ## 🎥 Demo
 
-<!-- Add a demo GIF or video here -->
-*Coming soon: Interactive demo showing natural language shopping conversations*
+*Coming soon - need to record a quick demo*
 
-## 🌟 Features
+## ✨ What it does
 
-### Core Functionality
-- **Natural Language Shopping**: Chat naturally about recipes, meals, or products
-- **Proactive Product Search**: Automatically searches Algolia when products are mentioned
-- **Smart Result Limiting**: 1 result per search if multiple searches, 4 results for single searches
-- **Recipe Ingredient Detection**: Automatically finds ingredients when discussing recipes
-- **Weather-Based Suggestions**: Suggests appropriate products based on weather mentions
-- **Conversation Memory**: Maintains context across conversation sessions (30min timeout)
-
-### Technical Features
-- **MCP Integration**: Uses Algolia MCP server for seamless product search
-- **Session Management**: Persistent conversations with automatic cleanup
-- **Comprehensive Logging**: Detailed logging of agent responses and search behavior
-- **Security**: Protected system prompt with shopping-focused boundaries
-- **CORS Enabled**: Ready for frontend integration
+- Chat naturally: "I'm making tacos tonight" → finds tortillas, beef, cheese, etc.
+- Weather aware: "It's so hot today!" → suggests ice cream and cold drinks  
+- Smart limiting: Shows 1 result per search when doing multiple searches, 4 when single
+- Remembers context: 30min conversation memory so you don't repeat yourself
+- Secure: Won't leak the system prompt or answer random non-shopping questions
 
 ## 🛠 Setup
 
-### Prerequisites
-- Node.js (v16 or higher)
-- Algolia account with products index
+**You'll need:**
+- Node.js 16+
 - OpenAI API key
-- Algolia MCP server
+- Algolia account
+- [Algolia MCP server](https://github.com/algolia/mcp-node) (download latest release + follow their auth setup)
 
-### Installation
-1. Clone the repository:
+**Quick start:**
+1. Get the [Algolia MCP server](https://github.com/algolia/mcp-node) running first
+2. Clone this repo and `npm run setup`
+3. Create an Algolia index and import `products.json` (dashboard or CLI)
+4. Copy `backend/.env.example` to `backend/.env` and fill in your keys
+5. `npm run dev` and you're good to go!
+
+## 🎯 Try it out
+
 ```bash
-git clone <repository-url>
-cd algolia-mcp-supermarket
-```
-
-2. Install all dependencies (backend + frontend):
-```bash
-npm run setup
-```
-
-3. Create environment file:
-```bash
-cd backend
-cp .env.example .env
-```
-
-4. Configure your `.env` file:
-```env
-# OpenAI API Configuration
-OPENAI_API_KEY="your_openai_api_key_here"
-
-# MCP Server Configuration  
-MCP_SERVER_URL="/path/to/your/algolia-mcp-server"
-
-# Algolia Configuration
-ALGOLIA_APP_ID="your_algolia_app_id_here"
-ALGOLIA_INDEX_NAME="your_algolia_index_name_here"
-
-# Server Configuration (optional)
-PORT=4242
-```
-
-5. Start the development servers:
-```bash
-# Start both backend and frontend in development mode
+# Start everything
 npm run dev
 
-# Or start individually:
-npm run dev:backend    # Backend only (Express server)
-npm run dev:frontend   # Frontend only (Next.js)
-npm run start          # Production backend only
+# Test it
+curl -X POST http://localhost:4242/api/chat -H "Content-Type: application/json" -d '{"prompt": "I want to make chocolate cake"}'
+
+curl -X POST http://localhost:4242/api/chat -H "Content-Type: application/json" -d '{"prompt": "Its really hot today!"}'
 ```
 
-## 🎯 Quick Start Commands
+## 📡 API
 
-```bash
-# Initial setup
-npm run setup
-
-# Development (both servers)
-npm run dev
-
-# Production backend
-npm start
-
-# View logs
-npm run logs
-
-# Clean install
-npm run clean && npm run install:all
-```
-
-### Quick Test Examples
-
-Once running, test these conversation examples:
-
-```bash
-# Terminal testing with curl
-curl -X POST http://localhost:4242/api/chat \
-  -H "Content-Type: application/json" \
-  -d '{"prompt": "I want to make chocolate cake"}'
-
-curl -X POST http://localhost:4242/api/chat \
-  -H "Content-Type: application/json" \
-  -d '{"prompt": "Its really hot today!"}'
-
-curl -X POST http://localhost:4242/api/chat \
-  -H "Content-Type: application/json" \
-  -d '{"prompt": "What do you have for breakfast?"}'
-```
-
-## 📡 API Endpoints
-
-### POST `/api/chat`
-Main chat endpoint with conversation memory
+**POST `/api/chat`** - The main endpoint
 ```json
-{
-  "prompt": "I need ingredients for chocolate cake",
-  "sessionId": "session_123" // optional
-}
+{"prompt": "I need ingredients for pizza"}
 ```
 
-**Response:**
-```json
-{
-  "message": "Here's what you'll need for a delicious chocolate cake...",
-  "products": [...], // Algolia search results
-  "totalProducts": 8,
-  "sessionId": "session_123",
-  "conversationInfo": {
-    "messageCount": 1,
-    "startTime": 1672531200000
-  }
-}
-```
+**GET `/api/conversations/:sessionId`** - Check conversation status  
+**DELETE `/api/conversations/:sessionId`** - End session
 
-### POST `/api/search`
-Direct product search
-```json
-{
-  "query": "organic milk",
-  "filters": "brand:organic" // optional
-}
-```
+## 🤖 How it works
 
-### GET `/api/conversations/:sessionId`
-Get conversation information
+The bot automatically searches when you mention:
+- Recipes → finds ingredients
+- Weather → suggests appropriate products  
+- Meals → finds components
+- Direct products → finds alternatives too
 
-### DELETE `/api/conversations/:sessionId`
-End a conversation session
-
-### GET `/api/info`
-API information and feature overview
-
-## 🤖 Agent Behavior
-
-The shopping assistant automatically searches for products when users mention:
-- **Recipes** → Searches for all ingredients
-- **Weather** → Suggests weather-appropriate products (hot→ice cream, cold→soup)
-- **Cooking questions** → Finds ingredients and cooking supplies  
-- **Health topics** → Suggests relevant healthy foods
-- **Meal planning** → Searches for meal components
-- **Direct product mentions** → Finds that product and alternatives
-- **Occasions/events** → Suggests appropriate products (party→snacks)
-
-## 📊 Logging & Monitoring
-
-All agent responses are logged to `./logs/agent-responses.log` with:
-- Timestamp and session information
-- User prompts and agent responses
-- Algolia search results tracking
-- Full agent state for debugging
-- Search success/failure indicators
-
-## 🏗 Architecture
-
-### Key Components
-- **Agent System**: OpenAI Agents with MCP integration
-- **Result Extraction**: Smart parsing of Algolia responses from agent state
-- **Session Management**: In-memory conversation storage with cleanup
-- **Logging System**: Comprehensive tracking for debugging and monitoring
-- **Workspace Management**: Monorepo structure with shared scripts
+Everything gets logged to `./logs/agent-responses.log` for debugging.
 
 ## 🔧 Development
 
-### Available Scripts
 ```bash
-# Setup and Installation
-npm run setup          # Complete project setup
-npm run install:all    # Install all dependencies
-npm run install:backend # Backend dependencies only
-npm run install:frontend # Frontend dependencies only
-
-# Development
-npm run dev            # Start both servers in development
-npm run dev:backend    # Backend development server only
-npm run dev:frontend   # Frontend development server only
-
-# Production
-npm start              # Start production backend
-npm run build          # Build frontend for production
-
-# Utilities
-npm run logs           # View agent response logs
-npm run clean          # Clean all node_modules
-npm test               # Run all tests
-npm run lint           # Lint all code
+npm run dev         # Both servers
+npm run dev:backend # Just the API
+npm run logs        # View agent logs
+npm run clean       # Clean slate
 ```
 
-### Project Structure
+Structure:
 ```
-├── package.json           # Root package with workspace scripts
-├── backend/
-│   ├── server.js         # Main Express server
-│   ├── package.json     # Backend dependencies
-│   └── .env.example     # Environment template
-├── frontend/            # Next.js frontend
-│   ├── package.json     # Frontend dependencies
-│   └── ...
-└── README.md           # This file
+├── backend/server.js    # Main Express app
+├── frontend/           # Next.js (WIP)
+├── products.json       # Sample data
+└── package.json        # Monorepo scripts
 ```
 
-## 🚀 Deployment
+## 🏆 Why I built this
 
-The application is designed to be easily deployable to any Node.js hosting platform. Ensure your MCP server is accessible and all environment variables are properly configured.
+I wanted to see if I could make shopping feel more natural than typing keywords into search boxes. The interesting part was getting the AI to proactively search for things without being explicitly asked - like understanding "it's hot today" means you might want cold drinks.
 
-## 🏆 Contest Submission
+**Cool technical bits:**
+- Parses OpenAI Agent responses to extract Algolia results  
+- Dynamic result limiting (1 per search when multiple, 4 when single)
+- Session memory with automatic cleanup
+- Monorepo setup for easy development
 
-This project demonstrates advanced MCP integration with:
-- **Real-world Use Case**: Practical shopping assistant for everyday grocery needs
-- **Smart Agent Behavior**: Context-aware product searching that anticipates user needs
-- **Technical Excellence**: Robust error handling, comprehensive, and production-ready architecture
-- **Scalable Design**: Monorepo structure with professional development workflows
-- **User Experience Focus**: Natural conversation flow with intelligent result limiting
-
-### Key Innovation: Proactive Product Discovery
-Unlike traditional search interfaces, this assistant proactively identifies shopping opportunities:
-- Recipe mentions → Automatic ingredient search
-- Weather references → Contextual product suggestions  
-- Casual food mentions → Related product discovery
-- Smart result limiting based on search complexity
-
-### Technical Highlights
-- **Advanced Result Extraction**: Sophisticated parsing of OpenAI Agent responses
-- **Dynamic Search Strategy**: 1 result per search when multiple, 4 when single
-- **Session Persistence**: Conversation memory with automatic cleanup
-
-**Ready for production deployment with Docker, cloud platforms, and enterprise scaling.**
+Built for the Algolia MCP contest - figured a practical shopping assistant would be more interesting than another generic chatbot.

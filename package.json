@@ -28,7 +28,6 @@
     "clean": "npm run clean:backend && npm run clean:frontend",
     "clean:backend": "cd backend && rm -rf node_modules package-lock.json",
     "clean:frontend": "cd frontend && rm -rf node_modules package-lock.json .next",
-    "logs": "tail -f backend/logs/agent-responses.log",
     "setup": "npm run install:all && echo '✅ Setup complete! Configure your .env file in the backend directory.'"
   },
   "devDependencies": {
